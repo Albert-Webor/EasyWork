@@ -18,7 +18,6 @@ public class Main {
                 SpringApplication.run(Main.class, args);
         SQLService service =
                 context.getBean(SQLService.class);
-
-        System.out.println(sQLService);
+        System.out.println(service.getSQLConfigure());
     }
 }

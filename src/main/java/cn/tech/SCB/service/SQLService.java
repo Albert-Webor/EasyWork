@@ -14,6 +14,10 @@ import java.util.List;
 public class SQLService {
     private final SQLConfigure sqlConfigure;
 
+    public SQLConfigure getSQLConfigure() {
+        return sqlConfigure;
+    }
+
     /*
     * 输入参数 : SQL所在的文件
     * */

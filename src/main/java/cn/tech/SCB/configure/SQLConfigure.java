@@ -9,6 +9,6 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "easy.work.scb.sql")
 public class SQLConfigure {
     private String sqlFile;
-    private String namesqlFile;
-
+    private String namesqlDeptFile;
+    private String namesqlReportFile;
 }
