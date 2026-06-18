@@ -9,7 +9,7 @@
      <parent>
          <groupId>org.springframework.boot</groupId>
          <artifactId>spring-boot-starter-parent</artifactId>
-         <version>3.2.1</version>
+         <version>3.2.12</version>
          <relativePath/>
      </parent>
 
@@ -25,12 +25,17 @@
              <groupId>org.springframework.boot</groupId>
              <artifactId>spring-boot-starter-web</artifactId>
          </dependency>
-
-         <!-- SQL 连接驱动 -->
+        <!-- 解析分析SQL-->
          <dependency>
-             <groupId>com.microsoft.sqlserver</groupId>
-             <artifactId>mssql-jdbc</artifactId>
-             <version>12.6.4.jre8</version>
+            <groupId>com.github.jsqlparser</groupId>
+            <artifactId>jsqlparser</artifactId>
+            <version>5.3</version>
+        </dependency>
+
+         <dependency>
+             <groupId>org.projectlombok</groupId>
+             <artifactId>lombok</artifactId>
+             <optional>true</optional>
          </dependency>
      </dependencies>
 
