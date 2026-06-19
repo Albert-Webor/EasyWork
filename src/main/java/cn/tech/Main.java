@@ -1,7 +1,6 @@
 package cn.tech;
 
-import cn.tech.SCB.configure.SQLConfigure;
-import cn.tech.SCB.service.SQLService;
+import cn.tech.shaun.customize.SCB.service.SQLService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,6 +17,6 @@ public class Main {
                 SpringApplication.run(Main.class, args);
         SQLService service =
                 context.getBean(SQLService.class);
-        System.out.println(service.getSQLConfigure());
+        System.out.println(service.lsSqlAnalysisByInputSqlString("select * from kdpa_sub_acct"));
     }
 }

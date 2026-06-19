@@ -1,4 +1,4 @@
-package cn.tech.SCB.configure;
+package cn.tech.shaun.customize.SCB.configure;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
