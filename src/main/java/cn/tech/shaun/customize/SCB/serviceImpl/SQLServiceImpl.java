@@ -2,10 +2,13 @@ package cn.tech.shaun.customize.SCB.serviceImpl;
 
 import cn.tech.shaun.customize.SCB.dto.SQLAnalysisdto;
 import cn.tech.shaun.customize.SCB.dto.SQLAnalysisdto.STable;
+import cn.tech.shaun.customize.SCB.dto.SQLAnalysisdto.STable.SWhere;
 import cn.tech.shaun.customize.SCB.service.SQLService;
 import lombok.RequiredArgsConstructor;
+import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.Statement;
@@ -15,11 +18,14 @@ import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.ParenthesedSelect;
+import net.sf.jsqlparser.statement.select.WithItem;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
@@ -30,7 +36,15 @@ public class SQLServiceImpl implements SQLService {
         List<SQLAnalysisdto> result = new ArrayList<>();
         try {
             Statement statement = CCJSqlParserUtil.parse(sqlString);
+            Set<String> cteNames = new HashSet<>();
             List<PlainSelect> selects = new ArrayList<>();
+            if (statement instanceof Select s && s.getWithItemsList() != null) {
+                for (WithItem<?> wi : s.getWithItemsList()) {
+                    if (wi.getAlias() != null) {
+                        cteNames.add(wi.getAlias().getName().toLowerCase());
+                    }
+                }
+            }
             if (statement instanceof PlainSelect ps) {
                 selects.add(ps);
             } else if (statement instanceof SetOperationList setOpList) {
@@ -42,12 +56,6 @@ public class SQLServiceImpl implements SQLService {
             }
             for (PlainSelect ps : selects) {
                 List<STable> tables = new ArrayList<>();
-                List<String> fields = new ArrayList<>();
-                if (ps.getSelectItems() != null) {
-                    for (SelectItem<?> item : ps.getSelectItems()) {
-                        fields.add(item.toString());
-                    }
-                }
 
                 List<String> conditions = new ArrayList<>();
                 if (ps.getWhere() != null) {
@@ -68,8 +76,10 @@ public class SQLServiceImpl implements SQLService {
 
                 if (ps.getFromItem() instanceof Table table) {
                     String name = table.getName();
-                    String alias = table.getAlias() != null ? table.getAlias().getName() : null;
-                    tableInfo.add(new String[]{name, alias});
+                    if (!cteNames.contains(name.toLowerCase())) {
+                        String alias = table.getAlias() != null ? table.getAlias().getName() : null;
+                        tableInfo.add(new String[]{name, alias});
+                    }
                 } else if (ps.getFromItem() instanceof ParenthesedSelect sub) {
                     tableInfo.add(new String[]{sub.toString(), null});
                 }
@@ -78,8 +88,10 @@ public class SQLServiceImpl implements SQLService {
                     for (Join join : ps.getJoins()) {
                         if (join.getRightItem() instanceof Table table) {
                             String name = table.getName();
-                            String alias = table.getAlias() != null ? table.getAlias().getName() : null;
-                            tableInfo.add(new String[]{name, alias});
+                            if (!cteNames.contains(name.toLowerCase())) {
+                                String alias = table.getAlias() != null ? table.getAlias().getName() : null;
+                                tableInfo.add(new String[]{name, alias});
+                            }
                             if (join.getOnExpression() != null) {
                                 conditions.add(join.getOnExpression().toString());
                             }
@@ -92,18 +104,37 @@ public class SQLServiceImpl implements SQLService {
                 for (String[] info : tableInfo) {
                     STable t = new STable();
                     t.setName(info[0]);
-                    List<String> conds = new ArrayList<>();
+                    List<SWhere> whereList = new ArrayList<>();
                     String lowerName = info[0].toLowerCase();
                     String lowerAlias = info[1] != null ? info[1].toLowerCase() : null;
                     for (String cond : conditions) {
                         String lower = cond.toLowerCase();
-                        if ((lowerAlias != null && lower.contains(lowerAlias + "."))
-                                || lower.contains(lowerName + ".")) {
-                            conds.add(cond);
+                        boolean match = (lowerAlias != null && lower.contains(lowerAlias + "."))
+                                || lower.contains(lowerName + ".");
+                        if (match) {
+                            SWhere sw = new SWhere();
+                            sw.setCondition(cond);
+                            List<String> condFields = new ArrayList<>();
+                            try {
+                                Expression condExpr = CCJSqlParserUtil.parseExpression(cond);
+                                List<Expression> exprStack = new ArrayList<>();
+                                exprStack.add(condExpr);
+                                while (!exprStack.isEmpty()) {
+                                    Expression e = exprStack.remove(exprStack.size() - 1);
+                                    if (e instanceof Column col) {
+                                        condFields.add(col.toString());
+                                    } else if (e instanceof BinaryExpression bin) {
+                                        exprStack.add(bin.getRightExpression());
+                                        exprStack.add(bin.getLeftExpression());
+                                    }
+                                }
+                            } catch (Exception ignored) {
+                            }
+                            sw.setSFields(condFields);
+                            whereList.add(sw);
                         }
                     }
-                    t.setSWhere(conds);
-                    t.setSFields(fields);
+                    t.setSWhere(whereList);
                     tables.add(t);
                 }
 
